@@ -129,10 +129,9 @@ class Vcf:
                         filter_stat[f] += 1
                     else:
                         filter_stat[f] = 1
-                if ("PASS" in rec.filter.keys() or not filter) and rec.alts and len(rec.alts) >= 1 and (
-                        gt_tag in rec.samples[sample].keys()) and (
-                        ad_tag in rec.samples[sample].keys()) and len(rec.samples[sample][gt_tag]) > 1 and len(
-                    rec.samples[sample][ad_tag]) > 1:
+                if ("PASS" in rec.filter.keys() or not filter) and rec.alts and len(rec.alts) >= 1 and (gt_tag in rec.samples[sample].keys()) and (ad_tag in rec.samples[sample].keys()) and len(rec.samples[sample][gt_tag]) >= 1 and len(rec.samples[sample][ad_tag]) > 1:
+                    # len(rec.samples[sample][gt_tag]) >= 1 add by Tianyu 20230403
+                    # calculate snp GT=1 in chrX chrY
                     if (len(rec.samples[sample][ad_tag]) > 1) and (rec.ref in alphabet) and (rec.alts[0] in alphabet):
                         pos.append(rec.pos)
                         ref.append(rec.ref)
@@ -154,8 +153,9 @@ class Vcf:
                             UNICODE_EXISTS = bool(type(unicode))
                         except NameError:
                             unicode = str
-                        if isinstance(rec.samples[sample][gt_tag], str) or isinstance(rec.samples[sample][gt_tag],
-                                                                                      unicode):
+                        # GT (0, 1) (1, 1) (1,)
+                        # get_from_list
+                        if isinstance(rec.samples[sample][gt_tag], str) or isinstance(rec.samples[sample][gt_tag], unicode):
                             gt.append(gt_from_str(rec.samples[sample][gt_tag]))
                         else:
                             gt.append(gt_from_list(rec.samples[sample][gt_tag], rec.samples[sample].phased))
