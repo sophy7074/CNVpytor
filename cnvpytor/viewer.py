@@ -300,7 +300,7 @@ class Figure(ViewParams):
         return ".".join(parts)
 
     @staticmethod
-    def _panels_shape(n):
+    def _panels_shape_old(n):
         sx, sy = 1, 1
         if n == 2:
             sy = 2
@@ -322,6 +322,12 @@ class Figure(ViewParams):
             while sx * sy < n:
                 sy += 1
                 sx = int(2. * sy / 3 + 1.)
+        return sx, sy
+
+    @staticmethod
+    def _panels_shape(n):
+        # sx, sy = 1, n
+        sx, sy = n, 1
         return sx, sy
 
 
@@ -382,6 +388,7 @@ class Viewer(Show, Figure, HelpDescription):
                 elif current == "manhattan":
                     self.global_plot()
                 elif current == "calls":
+                    print(self.callers)
                     if len(self.callers) > 0:
                         self.manhattan(plot_type=self.callers[0])
                 elif current == "stat":
@@ -430,10 +437,15 @@ class Viewer(Show, Figure, HelpDescription):
                     prompt_str = "cnvpytor> "
                 else:
                     self.interactive = False
+                # try:
+                #     line = raw_input(prompt_str)
+                # except NameError:
+                #     line = input(prompt_str)
+
                 try:
-                    line = raw_input(prompt_str)
-                except NameError:
                     line = input(prompt_str)
+                except NameError:
+                    line = raw_input(prompt_str)
 
                 if line == "" or line[0] == "#":
                     continue
@@ -854,7 +866,8 @@ class Viewer(Show, Figure, HelpDescription):
                 if self.io[self.plot_file].signal_exists(snp_chr, bin_size, "SNP likelihood", snp_flag) and (
                         Genome.is_autosome(c) or Genome.is_sex_chrom(c)):
                     chroms.append(snp_chr)
-        self.new_figure(panel_count=len(chroms))
+        self.new_figure(panel_count=len(chroms), panel_size=(24, 2))
+        #, panel_size=(24, 2)
         for c in chroms:
             likelihood = self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood", snp_flag)
             img = np.array(likelihood).transpose()
