@@ -22,7 +22,8 @@ def main():
 
     """
     parser = argparse.ArgumentParser(
-        description="Lite version of the CNVnator written in Python.\nA tool for CNV discovery from depth of read mapping.")
+        description="Lite version of the CNVnator written in Python.\nA tool for CNV discovery from depth of read mapping.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-version', '--version', action='store_true', help='show version number and exit')
     parser.add_argument('-root', '--root', type=str, nargs="+",
                         help="CNVnator hd5 file: data storage for all calculations", default=None)
