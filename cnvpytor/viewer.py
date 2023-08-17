@@ -171,6 +171,7 @@ class Figure(ViewParams):
         if self.output_filename != "":
             self.fig.set_figheight(panel_size[1] * sy)
             self.fig.set_figwidth(panel_size[0] * sx)
+            # print(panel_size, sx, sy)
         self.fig_grid = gridspec.GridSpec(sy, sx, hspace=self.margins[5], wspace=self.margins[4])
         self.current = -1
         self.sg_current = -1
@@ -276,17 +277,19 @@ class Figure(ViewParams):
                     try:
                         plt.savefig(image_filename, dpi=self.dpi)
                     except:
+                        _logger.warning(1)
                         _logger.warning("Figure is not saved due to an error!")
                 else:
                     _logger.warning("Figure is not saved!")
             plt.close(self.fig)
+            _logger.info('image_filename: ' + image_filename)
         elif self.interactive:
             plt.show(block=False)
             plt.draw()
         else:
             plt.show()
 
-    def _image_filename(self, suffix):
+    def _image_filename_old(self, suffix):
         parts = self.output_filename.split(".")
         if parts[-1] not in ["png", "pdf", "jpg", "eps", "svg"]:
             _logger.warning("File extension should be: .jpg, .png, .svg, .eps or .pdf")
@@ -299,8 +302,19 @@ class Figure(ViewParams):
         parts[-1] = suffix + "." + parts[-1]
         return ".".join(parts)
 
+    def _image_filename(self, suffix):
+        parts = self.output_filename.split(".")
+        if parts[-1] not in ["png", "pdf", "jpg", "eps", "svg"]:
+            _logger.warning("File extension should be: .jpg, .png, .svg, .eps or .pdf")
+            return None
+        if suffix != "":
+            parts[-1] = suffix + "." + parts[-1]
+        self.count += 1
+
+        return ".".join(parts)
+
     @staticmethod
-    def _panels_shape_old(n):
+    def _panels_shape(n):
         sx, sy = 1, 1
         if n == 2:
             sy = 2
@@ -325,7 +339,7 @@ class Figure(ViewParams):
         return sx, sy
 
     @staticmethod
-    def _panels_shape(n):
+    def _panels_shape_nouse(n):
         # sx, sy = 1, n
         sx, sy = n, 1
         return sx, sy
@@ -473,6 +487,7 @@ class Viewer(Show, Figure, HelpDescription):
                         except ValueError:
                             _logger.warning("File extension should be: .jpg, .png, .svg, .eps or .pdf")
                         except:
+                            _logger.warning(2)
                             _logger.warning("Figure is not saved due to an error!")
 
                 elif f[0] in ["draw", "repaint", "update"]:
@@ -852,6 +867,7 @@ class Viewer(Show, Figure, HelpDescription):
 
     def likelihood(self):
         bin_size = self.bin_size
+        _logger.info('bin_size: {}'.format(bin_size))
         snp_flag = (FLAG_USEMASK if self.snp_use_mask else 0) | (FLAG_USEID if self.snp_use_id else 0) | (
             FLAG_USEHAP if self.snp_use_phase else 0)
         if self.reference_genome is None:
@@ -866,20 +882,27 @@ class Viewer(Show, Figure, HelpDescription):
                 if self.io[self.plot_file].signal_exists(snp_chr, bin_size, "SNP likelihood", snp_flag) and (
                         Genome.is_autosome(c) or Genome.is_sex_chrom(c)):
                     chroms.append(snp_chr)
-        self.new_figure(panel_count=len(chroms), panel_size=(24, 2))
+        self.new_figure(panel_count=len(chroms), panel_size=(8, 6))
+        # panel_size=(24, 18)
         #, panel_size=(24, 2)
         for c in chroms:
             likelihood = self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood", snp_flag)
             img = np.array(likelihood).transpose()
             ax = self.next_panel()
-            ax.set_title(c, position=(0.01, 0.9), fontdict={'verticalalignment': 'top', 'horizontalalignment': 'left'},
-                         color='C0')
+            ax.set_title(c,
+                         position=(0.01, 0.9),
+                         fontdict={'verticalalignment': 'top',
+                                   'horizontalalignment': 'left'},
+                         fontsize=35,
+                         fontweight="bold",
+                         color='C2')
             ax.imshow(img, aspect='auto')
             ax.xaxis.set_ticklabels([])
             ax.yaxis.set_ticklabels([])
             ax.xaxis.set_ticks(np.arange(0, likelihood.shape[0], 50), minor=[])
             ax.set_xlim([0, likelihood.shape[0]])
             if self.snp_call and ("baf_mosaic" in self.callers):
+                print('baf_mosaic:, ', self.callers)
                 likelihood = self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood call", snp_flag)
                 segments = segments_decode(
                     self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood segments", snp_flag))
@@ -904,6 +927,7 @@ class Viewer(Show, Figure, HelpDescription):
                 plt.scatter(call_pos, call_i2, s=self.lh_markersize, color=np.array(call_c), edgecolors='face',
                             marker=self.lh_marker)
             if self.snp_call and ("combined_mosaic" in self.callers):
+                print('combined_mosaic:, ', self.callers)
                 likelihood = self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood call 2d", snp_flag)
                 segments = segments_decode(
                     self.io[self.plot_file].get_signal(c, bin_size, "SNP likelihood segments 2d", snp_flag))
@@ -927,7 +951,8 @@ class Viewer(Show, Figure, HelpDescription):
                             marker=self.lh_marker)
                 plt.scatter(call_pos, call_i2, s=self.lh_markersize, color=np.array(call_c), edgecolors='face',
                             marker=self.lh_marker)
-        self.fig_show(suffix="likelihood")
+        self.fig_show(suffix="likelihood.{}".format(bin_size))
+        # modify by Ty 20230809
 
     def baf(self):
         if self.reference_genome is None:
@@ -953,7 +978,12 @@ class Viewer(Show, Figure, HelpDescription):
             i2 = self.io[self.plot_file].get_signal(c, self.bin_size, "SNP i2", snp_flag)
 
             ax = self.next_panel()
-            ax.set_title(c, position=(0.01, 0.9), fontdict={'verticalalignment': 'top', 'horizontalalignment': 'left'},
+            ax.set_title(c,
+                         position=(0.01, 0.9),
+                         fontdict={'verticalalignment': 'top',
+                                   'horizontalalignment': 'left'},
+                         fontsize=25,
+                         fontweight="bold",
                          color='C0')
             ax.xaxis.set_ticklabels([])
             ax.yaxis.set_ticklabels([])
